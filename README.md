@@ -24,8 +24,8 @@ In enterprise production environments Elastic typically requires significant har
 However, in this specific use case—since the log volume produced by Rootless_V2CI is relatively limited (with respect to average Elastic workloads)—it was possible to minimize resource consumption by relying on a container-based deployment orchestrated via docker-compose.  
 These containers are configured to let the user decide whether to run the stack on a single host (Filebeat ingesting Rootless_V2CI logs on the same system as the rest of the stack) or to run Filebeat agents on one or more remote hosts (where Rootless_V2CI instances are running) and the rest of the stack on a dedicated host.  
 In particular, for correct operation in both scenarios, it is recommended that the host(s) running the stack provide:
-- 8 CPU cores at 2.5 GHz or higher
-- 16 GB RAM
+- 4 CPU cores at 2.5 GHz or higher
+- 12 GB RAM
 - 30 GB of free disk space
 
 ### Environment variable configuration
@@ -38,7 +38,7 @@ Execute the following steps in order (regardless of whether you choose a single-
 #### Start the Elastic Stack (Elasticsearch + Logstash + Kibana)
 ```bash
 cd elastic-log-monitoring
-sudo chmod +x ./*.sh ./scrpts/*.sh
+sudo chmod +x ./*.sh ./scripts/*.sh
 sudo ./install.sh
 sudo systemctl enable elastic-stack
 sudo systemctl status elastic-stack
@@ -144,7 +144,7 @@ Overall, the architectural choices—with the related resource calculations and 
 | **hot tier** | 1.670625         | 2.00475             | 1.066825   | --   |
 | **total**    | 1.670625         | 2.00475             | 1.066825   | --   |
 
-#### Server Roles and Resources
+#### Services Roles and Resources
 
 |                     | Roles             | Computational resources (vCPU) | Main memory (GB RAM) | High-performance storage (GB) | Capacity storage (GB) | note                                                                 |
 |---------------------|-------------------|--------------------------------|----------------------|-------------------------------|-----------------------|----------------------------------------------------------------------|
