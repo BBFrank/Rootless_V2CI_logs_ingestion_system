@@ -1,0 +1,255 @@
+services:
+  setup:
+    image: elasticsearch:${STACK_VERSION}
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - ./scripts/ILM_setup.sh:/usr/share/elasticsearch/ILM_setup.sh:ro
+      - ./scripts/cluster_setup.sh:/usr/share/elasticsearch/cluster_setup.sh:ro
+      - ./elasticsearch/master/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    user: "0"
+    environment:
+      - NODE_NAME=setup
+      - CLUSTER_NAME=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+      - ES_PORT=${ES_PORT}
+    command: ["bash", "-c", "/usr/share/elasticsearch/cluster_setup.sh && tail -f /dev/null"]
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f config/certs/v2ci-es-master-1/v2ci-es-master-1.crt ]"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+
+  v2ci-es-master-1:
+    depends_on:
+      setup:
+        condition: service_healthy
+    image: elasticsearch:${STACK_VERSION}
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/master/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - v2ci-es-master-1-data:/usr/share/elasticsearch/data
+    ports:
+      - ${ES_PORT}:${ES_PORT}
+    environment:
+      - NODE_NAME=v2ci-es-master-1
+      - CLUSTER_NAME=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ES_JAVA_OPTS=-Xms${MASTER_HEAP} -Xmx${MASTER_HEAP}
+      - xpack.license.self_generated.type=${LICENSE}
+      - ES_PORT=${ES_PORT}
+    #mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://$$NODE_NAME:$$ES_PORT | grep -q 'missing authentication credentials'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+
+  v2ci-es-master-2:
+    depends_on:
+      - v2ci-es-master-1
+    image: elasticsearch:${STACK_VERSION}
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/master/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - v2ci-es-master-2-data:/usr/share/elasticsearch/data
+    environment:
+      - NODE_NAME=v2ci-es-master-2
+      - CLUSTER_NAME=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ES_JAVA_OPTS=-Xms${MASTER_HEAP} -Xmx${MASTER_HEAP}
+      - xpack.license.self_generated.type=${LICENSE}
+      - ES_PORT=${ES_PORT}
+    #mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://$$NODE_NAME:$$ES_PORT | grep -q 'missing authentication credentials'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+
+  v2ci-es-master-3:
+    image: elasticsearch:${STACK_VERSION}
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/master/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - v2ci-es-master-3-data:/usr/share/elasticsearch/data
+    environment:
+      - NODE_NAME=v2ci-es-master-3
+      - CLUSTER_NAME=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ES_JAVA_OPTS=-Xms${MASTER_HEAP} -Xmx${MASTER_HEAP}
+      - xpack.license.self_generated.type=${LICENSE}
+      - ES_PORT=${ES_PORT}
+    #mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://$$NODE_NAME:$$ES_PORT | grep -q 'missing authentication credentials'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+  
+  v2ci-es-hot-1:
+    depends_on:
+      - v2ci-es-master-1
+    image: elasticsearch:${STACK_VERSION}
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - ./elasticsearch/hot/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - v2ci-es-hot-1-data:/usr/share/elasticsearch/data
+    environment:
+      - NODE_NAME=v2ci-es-hot-1
+      - CLUSTER_NAME=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ES_JAVA_OPTS=-Xms${DATA_HEAP} -Xmx${DATA_HEAP}
+      - xpack.license.self_generated.type=${LICENSE}
+      - ES_PORT=${ES_PORT}
+    #mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://$$NODE_NAME:$$ES_PORT | grep -q 'missing authentication credentials'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+
+  v2ci-logstash:
+    depends_on:
+      v2ci-es-master-1:
+        condition: service_healthy
+      v2ci-es-master-2:
+        condition: service_healthy
+      v2ci-es-master-3:
+        condition: service_healthy
+    image: logstash:${STACK_VERSION}
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./certs:/usr/share/logstash/config/certs
+      - v2ci-logstash-data:/usr/share/logstash/data
+    ports:
+      - ${LOGSTASH_PORT}:${LOGSTASH_PORT}
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - LOGSTASH_JAVA_OPTS=-Xms512m -Xmx512m
+      - LOGSTASH_PORT=${LOGSTASH_PORT}
+      - ES_PORT=${ES_PORT}
+      - LOG_TIMEZONE=${LOG_TIMEZONE}
+    #mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9600/_node/pipelines?pretty | grep -q 'logstash'"]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+
+  v2ci-kibana:
+    depends_on:
+      setup:
+        condition: service_healthy
+      v2ci-es-master-1:
+        condition: service_healthy
+      v2ci-es-master-2:
+        condition: service_healthy
+      v2ci-es-master-3:
+        condition: service_healthy
+      v2ci-es-hot-1:
+        condition: service_healthy
+    image: kibana:${STACK_VERSION}
+    volumes:
+      - ./certs:/usr/share/kibana/config/certs
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+      - v2ci-kibana-data:/usr/share/kibana/data
+    ports:
+      - ${KIBANA_PORT}:${KIBANA_PORT}
+    environment:
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PORT=${KIBANA_PORT}
+      - ES_PORT=${ES_PORT}
+    #mem_limit: ${MEM_LIMIT}
+    command: >
+      bash -c '
+        # Wait until kibana_system user is properly authenticated
+        until curl -s -u kibana_system:${KIBANA_PASSWORD} \
+          --cacert /usr/share/kibana/config/certs/ca/ca.crt \
+          https://v2ci-es-master-1:$$ES_PORT/_security/_authenticate | grep -q kibana_system; do
+          echo "waiting kibana_system auth..."; sleep 5;
+        done;
+        exec /usr/local/bin/kibana-docker
+      '
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert /usr/share/kibana/config/certs/ca/ca.crt -I https://v2ci-kibana:$$KIBANA_PORT | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+
+volumes:
+  v2ci-es-master-1-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      device: "/var/lib/elastic-stack/es-master-1-data"
+      o: "bind"
+  v2ci-es-master-2-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      device: "/var/lib/elastic-stack/es-master-2-data"
+      o: "bind"
+  v2ci-es-master-3-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      device: "/var/lib/elastic-stack/es-master-3-data"
+      o: "bind"
+  v2ci-es-hot-1-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      device: "/var/lib/elastic-stack/es-hot-data"
+      o: "bind"
+  v2ci-logstash-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      device: "/var/lib/elastic-stack/logstash-data"
+      o: "bind"
+  v2ci-kibana-data:
+    driver: local
+    driver_opts:
+      type: "none"
+      device: "/var/lib/elastic-stack/kibana-data"
+      o: "bind"

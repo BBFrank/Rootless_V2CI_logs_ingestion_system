@@ -1,0 +1,130 @@
+# ============================== Filebeat inputs ==============================
+filebeat.inputs:
+
+# --- INPUT 1: Main process logs (conf vars loader and projects processes launcher) ---
+- type: filestream
+  id: main-process-logs
+  enabled: true
+  paths:
+    - ${V2CI_BUILD_DIR}/logs/main.log
+  start_position: beginning
+  scan_frequency: 5s
+  recursive_glob.enabled: true
+  parsers:
+    - multiline:
+        type: pattern
+        # Message starts with: [YYYY-MM-DD HH:mm:ss]
+        pattern: '^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]'
+        negate: true
+        match: after
+  fields:
+    log_type: main_process
+    service_name: main
+    'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
+  fields_under_root: true
+
+# --- INPUT 2: Projects main logs (single project compilation engine, before threads, only on host machine)  ---
+- type: filestream
+  id: project-main-logs
+  enabled: true
+  paths:
+    - ${V2CI_BUILD_DIR}/*/logs/worker.log
+  start_position: beginning
+  scan_frequency: 5s
+  recursive_glob.enabled: true
+  parsers:
+    - multiline:
+        type: pattern
+        # As above
+        pattern: '^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]'
+        negate: true
+        match: after
+  fields:
+    log_type: project_main
+    service_name: project
+    'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
+  fields_under_root: true
+
+# --- INPUT 3: Projects threads logs on host (single thread for a specific arch for a specific project, still only on host machine) ---
+- type: filestream
+  id: project-host-thread-logs
+  enabled: true
+  paths:
+    - ${V2CI_BUILD_DIR}/*/logs/*-worker.log
+  start_position: beginning
+  scan_frequency: 5s
+  recursive_glob.enabled: true
+  parsers:
+    - multiline:
+        type: pattern
+        # As above
+        pattern: '^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]'
+        negate: true
+        match: after
+  fields:
+    log_type: project_host_thread
+    service_name: project-thread
+    'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
+  fields_under_root: true
+
+# --- INPUT 4: Projects threads logs inside chroot (single thread for a specific arch for a specific project, inside the arch's chroot) ---
+- type: filestream
+  id: project-chroot-thread-logs
+  enabled: true
+  paths:
+    - ${V2CI_BUILD_DIR}/*-chroot/home/*/logs/worker.log
+  start_position: beginning
+  scan_frequency: 5s
+  recursive_glob.enabled: true
+  parsers:
+    - multiline:
+        type: pattern
+        # As above
+        pattern: '^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]'
+        negate: true
+        match: after
+  fields:
+    log_type: project_chroot_thread
+    service_name: project-thread
+    'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
+  fields_under_root: true
+
+# ============================== Filebeat modules ==============================
+#filebeat.config.modules:
+#  path: ${path.config}/modules.d/*.yml
+#  reload.enabled: false
+
+# ================================== Outputs ===================================
+# Comment the following block after the initial setup (filebeat setup)
+# Note: with docker, the setup can be done by install.sh - so this block can be left commented
+#output.elasticsearch:
+#  hosts: ["https://v2ci-es-master-1:${ES_PORT:9200}"]
+#  username: "elastic"
+#  password: ""
+#  ssl.enabled: true
+#  ssl.certificate_authorities: ["/etc/filebeat/certs/elastic-ca.crt"]
+
+output.logstash:
+  hosts: ["v2ci-logstash:${LOGSTASH_PORT:5044}"]
+  ssl.enabled: true
+  ssl.certificate_authorities: ["/usr/share/filebeat/certs/ca.crt"]
+
+#output.console:
+#  pretty: true
+#  codec.json:
+#    pretty: true
+
+# ============================ Kibana =============================
+setup.kibana:
+  host: "https://v2ci-kibana:${KIBANA_PORT:5601}"
+  ssl.enabled: true
+  ssl.certificate_authorities: ["/usr/share/filebeat/certs/ca.crt"]
+
+# ================================== Logging ===================================
+logging.level: debug
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644

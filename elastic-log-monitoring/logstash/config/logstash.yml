@@ -1,0 +1,21 @@
+# This file is used to configure Logstash settings.
+#
+# Logstash 9 exposes the monitoring API under api.http.*
+api.http.host: "0.0.0.0"
+api.http.port: 9600-9700
+
+# Enable the monitoring of Logstash with the Elastic Stack
+xpack.monitoring.enabled: true
+xpack.monitoring.elasticsearch.hosts: [ "https://v2ci-es-master-1:${ES_PORT:9200}", "https://v2ci-es-master-2:${ES_PORT:9200}", "https://v2ci-es-master-3:${ES_PORT:9200}" ]
+xpack.monitoring.elasticsearch.username: elastic
+xpack.monitoring.elasticsearch.password: ${ELASTIC_PASSWORD}
+xpack.monitoring.allow_legacy_collection: true
+
+# Enable GeoIP database automatic downloading
+xpack.geoip.downloader.enabled: true
+xpack.geoip.downloader.endpoint: "https://geoip.elastic.co/v1/database"
+xpack.geoip.downloader.poll.interval: 24h
+
+# Specify the path to the certificate authority file for the Elasticsearch instances
+xpack.monitoring.elasticsearch.ssl:
+  certificate_authority: /usr/share/logstash/config/certs/ca/ca.crt

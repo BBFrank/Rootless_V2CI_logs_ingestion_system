@@ -1,0 +1,13 @@
+instances:
+  - name: v2ci-es-master-1
+    dns: [ "v2ci-es-master-1" ]
+  - name: v2ci-es-master-2
+    dns: [ "v2ci-es-master-2" ]
+  - name: v2ci-es-master-3
+    dns: [ "v2ci-es-master-3" ]
+  - name: v2ci-es-hot-1
+    dns: [ "v2ci-es-hot-1" ]
+  - name: v2ci-logstash
+    dns: [ "v2ci-logstash" ]
+  - name: v2ci-kibana
+    dns: [ "v2ci-kibana" ]
