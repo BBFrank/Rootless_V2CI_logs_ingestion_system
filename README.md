@@ -1,9 +1,9 @@
-# Elastic Stack for rootless_V2CI Log Ingestion
+# Elastic Stack for Rootless_V2CI Log Ingestion
 A plug & play system for the ingestion, processing, storage, and user-friendly visualization of Rootless_V2CI logs.
 
 ## Introduction
 The objective of this lightweight Elastic Stack is strictly tied to the use of the cross-compilation engine for Virtualsquare projects, Rootless_V2CI.  
-This engine, as described in its official repository https://github.com/BBFrank/rootless_V2CI, was designed to simplify the development and integration of unofficial Virtualsquare projects—therefore not available via conventional package managers—on Debian-based systems.  
+This engine, as described in its official repository https://github.com/BBFrank/Rootless_V2CI, was designed to simplify the development and integration of unofficial Virtualsquare projects—therefore not available via conventional package managers—on Debian-based systems.  
 This system produces, for each cross-compilation, for every project and for every architecture, a considerable amount of logs.  
 In order to allow the user to monitor in real time the progress and outcomes of the process started by Rootless_V2CI, this lightweight Elastic Stack ingests, processes, stores, and enables a user-friendly visualization of the cross-compilation engine logs through the following components:
 - **Filebeat**: a very lightweight agent that, once installed on the host(s) (single or multiple) where Rootless_V2CI is running, will send the logs to the stack without any heavy preprocessing;
