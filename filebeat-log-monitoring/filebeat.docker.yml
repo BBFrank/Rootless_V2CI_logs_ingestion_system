@@ -45,7 +45,29 @@ filebeat.inputs:
     'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
   fields_under_root: true
 
-# --- INPUT 3: Projects threads logs on host (single thread for a specific arch for a specific project, still only on host machine) ---
+# --- INPUT 3: Projects binaries rotation cronjob logs on host (autonomous cronjob launched by every project worker before threads and working on the final target directories of the project on the host) ---
+- type: filestream
+  id: project-cronjob-logs
+  enabled: true
+  paths:
+    - ${V2CI_BUILD_DIR}/*/logs/binaries_rotation_cronjob.log
+  start_position: beginning
+  scan_frequency: 5s
+  recursive_glob.enabled: true
+  parsers:
+    - multiline:
+        type: pattern
+        # As above
+        pattern: '^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]'
+        negate: true
+        match: after
+  fields:
+    log_type: project_cronjob
+    service_name: project-cronjob
+    'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
+  fields_under_root: true
+
+# --- INPUT 4: Projects threads logs on host (single thread for a specific arch for a specific project, still only on host machine) ---
 - type: filestream
   id: project-host-thread-logs
   enabled: true
@@ -67,7 +89,7 @@ filebeat.inputs:
     'event.timezone': ${FILEBEAT_TIMEZONE:UTC}
   fields_under_root: true
 
-# --- INPUT 4: Projects threads logs inside chroot (single thread for a specific arch for a specific project, inside the arch's chroot) ---
+# --- INPUT 5: Projects threads logs inside chroot (single thread for a specific arch for a specific project, inside the arch's chroot) ---
 - type: filestream
   id: project-chroot-thread-logs
   enabled: true
